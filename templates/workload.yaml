@@ -19,6 +19,7 @@ spec:
       containers:
         - name: "{{ .Values.name }}"
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: {{ .Values.container.port }}
           resources:
@@ -102,17 +103,17 @@ spec:
           {{- end }}
           {{- end }}
 
-          {{- if eq .Values.workload.type "StatefulSet" }}
+          {{- if and (eq .Values.workload.type "StatefulSet") .Values.persistence.enabled }}
           volumeMounts:
             - name: data
-              mountPath: /data
+              mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
-  {{- if eq .Values.workload.type "StatefulSet" }}
+  {{- if and (eq .Values.workload.type "StatefulSet") .Values.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes: {{ toYaml .Values.persistence.accessModes | nindent 8 }}
         resources:
           requests:
             storage: {{ .Values.workload.storageSize }}

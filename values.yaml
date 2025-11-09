@@ -15,6 +15,12 @@ workload:
   replicas: 3
   storageSize: 20Gi
 
+persistence:
+  enabled: true
+  mountPath: /data/db   
+  accessModes:
+    - ReadWriteOnce
+
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 2
 
