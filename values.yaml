@@ -7,6 +7,8 @@ name: forcet
 # Kubernetes namespace to install into (can be overridden)
 namespace: forcet22-dev
 
+labels:
+  app: forcet
 
 workload:
   type: Deployment      # "Deployment" o "StatefulSet"
@@ -105,40 +107,13 @@ secret:
   data: []
 
 networkPolicy:
-  enabled: true
-  defaultDeny: true
-
-  data:
-    app: mongo
-    port: 27017
-    allowedFromApps:
-      - backend-data
-
-  backendData:
-    app: backend-data
-    port: 8081
-    allowedFromApps:
-      - backend-api
-    allowedTo:
-      - app: mongo
-        port: 27017
-
-  backendApi:
-    app: backend-api
-    port: 8080
-    allowedFromApps:
-      - frontend
-    allowedTo:
-      - app: backend-data
-        port: 8081
-
-  frontend:
-    app: frontend
-    port: 80
-    allowedTo:
-      - app: backend-api
-        port: 8080
-    allowInternet: true
+  enabled: false       
+  port: 8080
+  ingressFromApps: []   
+  egressTo: []         
+  allowInternetEgress: false
+  defaultDeny:
+    enable: false
 
 route:
   enabled: true

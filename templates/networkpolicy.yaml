@@ -1,0 +1,61 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-np
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.labels.app }}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # INGRESS: quién puede entrar a ESTE servicio
+  ingress:
+    - from:
+        {{- range .Values.networkPolicy.ingressFromApps }}
+        - podSelector:
+            matchLabels:
+              app: {{ . }}
+        {{- end }}
+      {{- if .Values.networkPolicy.port }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.port }}
+      {{- end }}
+
+  # EGRESS: a quién puede llamar ESTE servicio
+  egress:
+    {{- if or (.Values.networkPolicy.egressTo) (.Values.networkPolicy.allowInternetEgress) }}
+    {{- if .Values.networkPolicy.egressTo }}
+    - to:
+        {{- range .Values.networkPolicy.egressTo }}
+        - podSelector:
+            matchLabels:
+              app: {{ .app }}
+        {{- end }}
+      ports:
+        {{- range .Values.networkPolicy.egressTo }}
+        - protocol: TCP
+          port: {{ .port }}
+        {{- end }}
+    {{- end }}
+
+    {{- if .Values.networkPolicy.allowInternetEgress }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+    {{- end }}
+    {{- else }}
+    # Si no definiste nada, puedes dejar todo bloqueado o todo abierto.
+    # Aquí lo dejo TODO BLOQUEADO (no egress).
+    []
+    {{- end }}
+{{- end }}
