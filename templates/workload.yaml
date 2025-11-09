@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: {{ .Values.workload.type | default "Deployment" }} 
+metadata:
+  name: "{{ .Values.name }}"
+  namespace: "{{ .Values.namespace }}"
+spec:
+  {{- if eq .Values.workload.type "StatefulSet" }}
+  serviceName: "{{ .Values.name }}"
+  {{- end }}
+  replicas: {{ .Values.workload.replicas | default 1}}
+  selector:
+    matchLabels:
+      app: "{{ .Values.name }}"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Values.name }}"
+    spec:
+      containers:
+        - name: "{{ .Values.name }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.container.port }}
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.request.cpu }}"
+              memory: "{{ .Values.resources.request.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"
+          envFrom:
+            - configMapRef:
+                name: "{{ .Values.name }}-config"
+          {{- if and .Values.secret.enabled .Values.secret.data }}
+            - secretRef:
+                name: "{{ .Values.name }}-secret"
+          {{- end }}
+
+          {{- with .Values.probes.startup }}
+          {{- if .enabled }}
+          startupProbe:
+            {{- if eq .type "httpGet" }}
+            httpGet:
+              path: "{{ .path }}"
+              port: {{ .port }}
+            {{- else if eq .type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .port }}
+            {{- else if eq .type "exec" }}
+            exec:
+              command:
+                {{- range .execCommand }}
+                - "{{ . }}"
+                {{- end }}
+            {{- end }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- end }}
+
+          {{- with .Values.probes.readiness }}
+          {{- if .enabled }}
+          readinessProbe:
+            {{- if eq .type "httpGet" }}
+            httpGet:
+              path: "{{ .path }}"
+              port: {{ .port }}
+            {{- else if eq .type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .port }}
+            {{- else if eq .type "exec" }}
+            exec:
+              command:
+                {{- range .execCommand }}
+                - "{{ . }}"
+                {{- end }}
+            {{- end }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- end }}
+
+          {{- with .Values.probes.liveness }}
+          {{- if .enabled }}
+          livenessProbe:
+            {{- if eq .type "httpGet" }}
+            httpGet:
+              path: "{{ .path }}"
+              port: {{ .port }}
+            {{- else if eq .type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .port }}
+            {{- else if eq .type "exec" }}
+            exec:
+              command:
+                {{- range .execCommand }}
+                - "{{ . }}"
+                {{- end }}
+            {{- end }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- end }}
+
+          {{- if eq .Values.workload.type "StatefulSet" }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
+  {{- if eq .Values.workload.type "StatefulSet" }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.workload.storageSize }}
+  {{- end }}

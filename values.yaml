@@ -1,0 +1,170 @@
+# Default values for helm-data.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+name: forcet
+
+# Kubernetes namespace to install into (can be overridden)
+namespace: forcet22-dev
+
+
+workload:
+  type: Deployment      # "Deployment" o "StatefulSet"
+  replicas: 3
+  storageSize: 20Gi
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 2
+
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount: {}
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  enabled: true
+  type: ClusterIP     # para exponerlo en el cluster (ClusterIP / NodePort / LoadBalancer)
+  port: 80
+  targetPort: 8080
+  headless: true
+  protocol: TCP
+
+container:
+  port: 3000
+  failureThreshold: 5
+  initialDelaySeconds: 0
+  periodSeconds: 10
+
+image:
+  repository: "forcet22/hola-node"
+  tag: "16"
+
+resources:
+  request:
+    cpu: "500m"
+    memory: "800Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1500Mi"
+
+probes:
+  startup:
+    enabled: true
+    path: /startup
+    port: 3000       
+    periodSeconds: 10
+    failureThreshold: 30
+
+  readiness:
+    enabled: true
+    path: /readiness
+    port: 3000
+    periodSeconds: 10
+    failureThreshold: 3
+
+  liveness:
+    enabled: true
+    path: /health
+    port: 3000
+    periodSeconds: 10
+    failureThreshold: 3
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+configMap:
+  data: []
+
+secret:
+  enable: true
+  data: []
+
+networkPolicy:
+  enabled: true
+  defaultDeny: true
+
+  data:
+    app: mongo
+    port: 27017
+    allowedFromApps:
+      - backend-data
+
+  backendData:
+    app: backend-data
+    port: 8081
+    allowedFromApps:
+      - backend-api
+    allowedTo:
+      - app: mongo
+        port: 27017
+
+  backendApi:
+    app: backend-api
+    port: 8080
+    allowedFromApps:
+      - frontend
+    allowedTo:
+      - app: backend-data
+        port: 8081
+
+  frontend:
+    app: frontend
+    port: 80
+    allowedTo:
+      - app: backend-api
+        port: 8080
+    allowInternet: true
+
+route:
+  enabled: true
+  host: ""          # vacío → que OpenShift genere uno
+  serviceName: ""   # si vacío, usamos .Values.name
+  targetPort: ""    # si vacío, usamos service.port
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
