@@ -100,11 +100,11 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
 
 configMap:
-  data: []
+  data: {}
 
 secret:
-  enable: true
-  data: []
+  enabled: true
+  data: {}
 
 networkPolicy:
   enabled: false       
@@ -113,7 +113,7 @@ networkPolicy:
   egressTo: []         
   allowInternetEgress: false
   defaultDeny:
-    enable: false
+    enabled: false
 
 route:
   enabled: true
