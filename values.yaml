@@ -120,6 +120,7 @@ networkPolicy:
   allowInternetEgress: false
   defaultDeny:
     enabled: false
+  allowDnsEgress: true
 
 route:
   enabled: true

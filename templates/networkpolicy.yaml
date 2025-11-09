@@ -4,6 +4,8 @@ kind: NetworkPolicy
 metadata:
   name: {{ .Values.name }}-np
   namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
 spec:
   podSelector:
     matchLabels:
@@ -12,23 +14,24 @@ spec:
     - Ingress
     - Egress
 
-  # INGRESS: quién puede entrar a ESTE servicio
   ingress:
+    {{- if .Values.networkPolicy.ingressFromApps }}
     - from:
         {{- range .Values.networkPolicy.ingressFromApps }}
         - podSelector:
             matchLabels:
               app: {{ . }}
         {{- end }}
-      {{- if .Values.networkPolicy.port }}
       ports:
         - protocol: TCP
           port: {{ .Values.networkPolicy.port }}
-      {{- end }}
+    {{- else }}
+    []
+    {{- end }}
 
-  # EGRESS: a quién puede llamar ESTE servicio
   egress:
-    {{- if or (.Values.networkPolicy.egressTo) (.Values.networkPolicy.allowInternetEgress) }}
+    {{- $hasEgress := or (.Values.networkPolicy.egressTo) (.Values.networkPolicy.allowDnsEgress) (.Values.networkPolicy.allowInternetEgress) }}
+    {{- if $hasEgress }}
     {{- if .Values.networkPolicy.egressTo }}
     - to:
         {{- range .Values.networkPolicy.egressTo }}
@@ -43,10 +46,20 @@ spec:
         {{- end }}
     {{- end }}
 
-    {{- if .Values.networkPolicy.allowInternetEgress }}
+    {{- if .Values.networkPolicy.allowDnsEgress }}
     - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+
+    {{- if .Values.networkPolicy.allowInternetEgress }}
+    - to: []
       ports:
         - protocol: TCP
           port: 80
@@ -54,8 +67,6 @@ spec:
           port: 443
     {{- end }}
     {{- else }}
-    # Si no definiste nada, puedes dejar todo bloqueado o todo abierto.
-    # Aquí lo dejo TODO BLOQUEADO (no egress).
     []
     {{- end }}
 {{- end }}
