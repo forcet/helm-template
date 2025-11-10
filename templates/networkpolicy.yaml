@@ -15,12 +15,19 @@ spec:
     - Egress
 
   ingress:
-    {{- if .Values.networkPolicy.ingressFromApps }}
+    {{- if or .Values.networkPolicy.ingressFromApps .Values.networkPolicy.allowIngressFromRouter }}
     - from:
+        {{- if .Values.networkPolicy.ingressFromApps }}
         {{- range .Values.networkPolicy.ingressFromApps }}
         - podSelector:
             matchLabels:
               app: {{ . }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.networkPolicy.allowIngressFromRouter }}
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
         {{- end }}
       ports:
         - protocol: TCP
